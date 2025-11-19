@@ -4,7 +4,7 @@
   <version>0.0.1</version>
   <description>FAST-LIO Multi – ROS2 port</description>
 
-  <maintainer email="eungchang_mason@kaist.ac.kr">Eungchang Mason Lee</maintainer>
+  <maintainer email="dwojcikie@ethz.ch">Dominik Wojcikiewicz</maintainer>
   <license>GPL2</license>
 
   <!-- REQUIRED: build tool -->

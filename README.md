@@ -1,37 +1,101 @@
-# FAST-LIO-MULTI
-+ This repository is a [FAST-LIO2](https://github.com/hku-mars/FAST_LIO)'s extended version of multi-LiDAR
-+ Optionally, user can choose one of bundle update method vs asynchronous update vs adaptive update method
+# FAST-LIO-MULTI_ROS2
 
-## Related video: https://youtu.be/YQmjKMoBPNU
+This repository is a **ROS2 port** of [FAST-LIO-MULTI](https://github.com/engcang/FAST_LIO_MULTI),  
+which itself is a multi-LiDAR extension of [FAST-LIO2](https://github.com/hku-mars/FAST_LIO).
 
-<br>
+- Original project: **FAST-LIO-MULTI** (ROS1)
+- This fork: **FAST-LIO-MULTI_ROS2** (ROS2)
+- ROS2 integration and structure inspired by: [FAST_LIO_ROS2](https://github.com/Ericsii/FAST_LIO_ROS2)
+
+Optionally, the user can choose one of:
+- **Bundle update**
+- **Asynchronous update**
+- **Adaptive update**
+
+The algorithmic behavior of the three update modes is kept as close as possible to the original ROS1 implementation, with only the ROS interface and required glue adapted to ROS2.
+
+---
+
+## Related video
+
+Original FAST-LIO-MULTI demo video (ROS1):  
+https://youtu.be/YQmjKMoBPNU
+
+The update methods and performance characteristics described there also apply conceptually to this ROS2 port.
+
+---
 
 ## Dependencies
-+ `ROS`, `Ubuntu`, `PCL` >= 1.8, `Eigen` >= 3.3.4
-+ [`livox_ros_driver`](https://github.com/Livox-SDK/livox_ros_driver)
-```shell
-cd ~/your_workspace/src
-git clone https://github.com/Livox-SDK/livox_ros_driver
+
+### Core
+
+- **ROS2** (tested with Humble)
+- **Ubuntu** (tested with 22.04)
+- **PCL** ≥ 1.8  
+- **Eigen** ≥ 3.3.4
+
+### Livox driver (ROS2)
+
+For Livox sensors, use the ROS2 driver:
+
+- [`livox_ros_driver2`](https://github.com/Livox-SDK/livox_ros_driver2)
+
+Example installation:
+
+```bash
+# In your ROS2 workspace
+cd ~/your_ros2_ws/src
+git clone https://github.com/Livox-SDK/livox_ros_driver2.git
+
 cd ..
-catkin build -DCMAKE_BUILD_TYPE=Release
+rosdep install --from-paths src --ignore-src -r -y
+colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
+source install/setup.bash
 ```
 
-## How to build and run
-+ Get the code, and then build
-```shell
-cd ~/your_workspace/src
-git clone https://github.com/engcang/FAST_LIO_MULTI
+---
 
-cd ..
-catkin build -DCMAKE_BUILD_TYPE=Release
-. devel/setup.bash
+## How to build and run (ROS2)
+
+### 1. Get the code
+
+```bash
+cd ~/your_ros2_ws/src
+git clone https://github.com/Draxran/FAST_LIO_MULTI_ROS2.git
+cd FAST_LIO_MULTI_ROS2
+git submodule update --init --recursive
 ```
-+ Then run
-```shell
-roslaunch fast_lio_multi run.launch update_method:=bundle
-roslaunch fast_lio_multi run.launch update_method:=async
-roslaunch fast_lio_multi run.launch update_method:=adaptive
+
+### 2. Build with `colcon`
+
+From the workspace root:
+
+```bash
+cd ~/your_ros2_ws
+rosdep install --from-paths src --ignore-src -r -y
+
+colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
+source install/setup.bash
 ```
+
+### 3. Run
+
+A ROS2 launch file is provided:
+
+```bash
+# Bundle update
+ros2 launch fast_lio_multi fast_lio_multi.launch.py update_method:=bundle
+
+# Asynchronous update
+ros2 launch fast_lio_multi fast_lio_multi.launch.py update_method:=async
+
+# Adaptive update
+ros2 launch fast_lio_multi fast_lio_multi.launch.py update_method:=adaptive
+```
+
+The launch file wraps the same three mapping nodes (bundle / async / adaptive) as in the original ROS1 project, but using ROS2 nodes, topics, and parameters.
+
+---
 
 <br>
 
