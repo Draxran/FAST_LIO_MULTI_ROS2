@@ -1,7 +1,7 @@
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include <pcl_conversions/pcl_conversions.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <livox_ros_driver/CustomMsg.h>
+#include <livox_ros_driver2/msg/custom_msg.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
 using namespace std;
 
@@ -84,8 +84,8 @@ class Preprocess
   Preprocess();
   ~Preprocess();
   
-  void process(const livox_ros_driver::CustomMsg::ConstPtr &msg, PointCloudXYZI::Ptr &pcl_out, const int &lidar_num);
-  void process(const sensor_msgs::PointCloud2::ConstPtr &msg, PointCloudXYZI::Ptr &pcl_out, const int &lidar_num);
+  void process(const livox_ros_driver2::msg::CustomMsg::UniquePtr &msg, PointCloudXYZI::Ptr &pcl_out, const int &lidar_num);
+  void process(const sensor_msgs::msg::PointCloud2::UniquePtr &msg, PointCloudXYZI::Ptr &pcl_out, const int &lidar_num);
   void set();
 
   PointCloudXYZI pl_full, pl_surf;
@@ -98,7 +98,7 @@ class Preprocess
     
 
   private:
-  void avia_handler(const livox_ros_driver::CustomMsg::ConstPtr &msg, const int &lidar_num);
-  void oust64_handler(const sensor_msgs::PointCloud2::ConstPtr &msg, const int &lidar_num);
-  void velodyne_handler(const sensor_msgs::PointCloud2::ConstPtr &msg, const int &lidar_num);
+  void avia_handler(const livox_ros_driver2::msg::CustomMsg::UniquePtr &msg, const int &lidar_num);
+  void oust64_handler(const sensor_msgs::msg::PointCloud2::UniquePtr &msg, const int &lidar_num);
+  void velodyne_handler(const sensor_msgs::msg::PointCloud2::UniquePtr &msg, const int &lidar_num);
 };

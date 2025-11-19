@@ -63,13 +63,13 @@ void Preprocess::set()
   return;
 }
 
-void Preprocess::process(const livox_ros_driver::CustomMsg::ConstPtr &msg, PointCloudXYZI::Ptr &pcl_out, const int &lidar_num)
+void Preprocess::process(const livox_ros_driver2::msg::CustomMsg::UniquePtr &msg, PointCloudXYZI::Ptr &pcl_out, const int &lidar_num)
 {  
   avia_handler(msg, lidar_num);
   *pcl_out = pl_surf;
 }
 
-void Preprocess::process(const sensor_msgs::PointCloud2::ConstPtr &msg, PointCloudXYZI::Ptr &pcl_out, const int &lidar_num)
+void Preprocess::process(const sensor_msgs::msg::PointCloud2::UniquePtr &msg, PointCloudXYZI::Ptr &pcl_out, const int &lidar_num)
 {
   switch (lidar_type[lidar_num])
   {
@@ -88,7 +88,7 @@ void Preprocess::process(const sensor_msgs::PointCloud2::ConstPtr &msg, PointClo
   *pcl_out = pl_surf;
 }
 
-void Preprocess::avia_handler(const livox_ros_driver::CustomMsg::ConstPtr &msg, const int &lidar_num)
+void Preprocess::avia_handler(const livox_ros_driver2::msg::CustomMsg::UniquePtr &msg, const int &lidar_num)
 {
   pl_surf.clear();
   pl_full.clear();
@@ -129,7 +129,7 @@ void Preprocess::avia_handler(const livox_ros_driver::CustomMsg::ConstPtr &msg, 
   }
 }
 
-void Preprocess::oust64_handler(const sensor_msgs::PointCloud2::ConstPtr &msg, const int &lidar_num)
+void Preprocess::oust64_handler(const sensor_msgs::msg::PointCloud2::UniquePtr &msg, const int &lidar_num)
 {
   pl_surf.clear();
   pl_full.clear();
@@ -137,7 +137,7 @@ void Preprocess::oust64_handler(const sensor_msgs::PointCloud2::ConstPtr &msg, c
   pcl::fromROSMsg(*msg, pl_orig);
   int plsize = pl_orig.size();
   pl_surf.reserve(plsize);
-  double time_stamp = msg->header.stamp.toSec();
+  double time_stamp = rclcpp::Time(msg->header.stamp).seconds();
   // cout << "===================================" << endl;
   // printf("Pt size = %d, N_SCANS[lidar_num] = %d\r\n", plsize, N_SCANS[lidar_num]);
   for (int i = 0; i < pl_orig.points.size(); i++)
@@ -163,7 +163,7 @@ void Preprocess::oust64_handler(const sensor_msgs::PointCloud2::ConstPtr &msg, c
   }
 }
 
-void Preprocess::velodyne_handler(const sensor_msgs::PointCloud2::ConstPtr &msg, const int &lidar_num)
+void Preprocess::velodyne_handler(const sensor_msgs::msg::PointCloud2::UniquePtr &msg, const int &lidar_num)
 {
     pl_surf.clear();
     pl_full.clear();
