@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, OpaqueFunction, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 
 
@@ -12,7 +13,7 @@ def generate_launch_description():
 
     update_method_arg = DeclareLaunchArgument(
         'update_method',
-        default_value='adaptive',
+        default_value='bundle',
         description='Update method: bundle, async, adaptive'
     )
 
@@ -67,9 +68,20 @@ def generate_launch_description():
 
     lidar_node_action = OpaqueFunction(function=choose_node)
 
+    fast_lio_to_wheelchair_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare('pc_utils'),
+                'launch',
+                'fast_lio_to_wheelchair_odom.launch.py',
+            ])
+        )
+    )   
+
     return LaunchDescription([
         update_method_arg,
         config_arg,
         static_tf,
         lidar_node_action,
+        fast_lio_to_wheelchair_launch
     ])

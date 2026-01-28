@@ -152,6 +152,17 @@ int scan_num = 0;
 int scan_num2 = 0;
 Eigen::Vector3d localizability_vec = Eigen::Vector3d::Zero();
 
+// --- New globals for zeroing the published frame ---
+bool zero_start_pose = false;   // parameter-controlled
+int zero_start_delay_scans = 10; // how many scans to wait before zeroing
+bool zero_pose_initialized = false;
+
+Eigen::Matrix4d T_world_to_zero = Eigen::Matrix4d::Identity(); // T_ZW
+Eigen::Vector3d pub_pos = Eigen::Vector3d::Zero();
+Eigen::Quaterniond pub_quat = Eigen::Quaterniond::Identity();
+
+int processed_scans_for_zero = 0;
+
 void SigHandle(int sig)
 {
     flg_exit = true;
@@ -579,6 +590,11 @@ void publish_frame_world(
                                 &laserCloudWorld->points[i]);
         }
 
+        if (zero_start_pose && zero_pose_initialized)
+        {
+            pcl::transformPointCloud(*laserCloudWorld, *laserCloudWorld, T_world_to_zero);
+        }
+
         sensor_msgs::msg::PointCloud2 laserCloudmsg;
         pcl::toROSMsg(*laserCloudWorld, laserCloudmsg);
         laserCloudmsg.header.stamp = get_ros_time(publish_lidar_time);
@@ -648,23 +664,41 @@ void publish_frame_body(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::
 
 void publish_map(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr &pubLaserCloudMap)
 {
+    PointCloudXYZI::Ptr map_world(new PointCloudXYZI(*featsFromMap));
+    if (zero_start_pose && zero_pose_initialized)
+    {
+        pcl::transformPointCloud(*map_world, *map_world, T_world_to_zero);
+    }
+
     sensor_msgs::msg::PointCloud2 laserCloudMap;
-    pcl::toROSMsg(*featsFromMap, laserCloudMap);
+    pcl::toROSMsg(*map_world, laserCloudMap);
     laserCloudMap.header.stamp = get_ros_time(publish_lidar_time);
     laserCloudMap.header.frame_id = map_frame;
     pubLaserCloudMap->publish(laserCloudMap);
 }
 
+// template <typename T>
+// void set_posestamp(T &out)
+// {
+//     out.pose.position.x = state_point.pos(0);
+//     out.pose.position.y = state_point.pos(1);
+//     out.pose.position.z = state_point.pos(2);
+//     out.pose.orientation.x = geoQuat.x;
+//     out.pose.orientation.y = geoQuat.y;
+//     out.pose.orientation.z = geoQuat.z;
+//     out.pose.orientation.w = geoQuat.w;
+// }
+
 template <typename T>
 void set_posestamp(T &out)
 {
-    out.pose.position.x = state_point.pos(0);
-    out.pose.position.y = state_point.pos(1);
-    out.pose.position.z = state_point.pos(2);
-    out.pose.orientation.x = geoQuat.x;
-    out.pose.orientation.y = geoQuat.y;
-    out.pose.orientation.z = geoQuat.z;
-    out.pose.orientation.w = geoQuat.w;
+    out.pose.position.x = pub_pos(0);
+    out.pose.position.y = pub_pos(1);
+    out.pose.position.z = pub_pos(2);
+    out.pose.orientation.x = pub_quat.x();
+    out.pose.orientation.y = pub_quat.y();
+    out.pose.orientation.z = pub_quat.z();
+    out.pose.orientation.w = pub_quat.w();
 }
 
 void publish_visionpose(const rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr &publisher)
@@ -674,8 +708,10 @@ void publish_visionpose(const rclcpp::Publisher<geometry_msgs::msg::PoseStamped>
     msg_out_.header.stamp = get_ros_time(publish_lidar_time);
 
     Eigen::Matrix4d current_pose_eig_ = Eigen::Matrix4d::Identity();
-    current_pose_eig_.block<3, 3>(0, 0) = state_point.rot.toRotationMatrix();
-    current_pose_eig_.block<3, 1>(0, 3) = state_point.pos;
+    // current_pose_eig_.block<3, 3>(0, 0) = state_point.rot.toRotationMatrix();
+    // current_pose_eig_.block<3, 1>(0, 3) = state_point.pos;
+    current_pose_eig_.block<3, 3>(0, 0) = pub_quat.toRotationMatrix();
+    current_pose_eig_.block<3, 1>(0, 3) = pub_pos;
     Eigen::Matrix4d tfed_vision_pose_eig_ =
         LiDAR1_wrt_drone * current_pose_eig_ * LiDAR1_wrt_drone.inverse();
     msg_out_.pose.position.x = tfed_vision_pose_eig_(0, 3);
@@ -937,6 +973,9 @@ public:
         this->declare_parameter<bool>("pcd_save.pcd_save_en", false);
         this->declare_parameter<int>("pcd_save.interval", -1);
 
+        this->declare_parameter<bool>("mapping.zero_start_pose", false);
+        this->declare_parameter<int>("mapping.zero_start_delay_scans", 10);
+
         //--------------------------------------
         // 2. Get parameters
         //--------------------------------------
@@ -990,6 +1029,10 @@ public:
 
         this->get_parameter_or("pcd_save.pcd_save_en", pcd_save_en, false);
         this->get_parameter_or("pcd_save.interval", pcd_save_interval, -1);
+
+        this->get_parameter_or("mapping.zero_start_pose", zero_start_pose, false);
+        this->get_parameter_or("mapping.zero_start_delay_scans",
+                               zero_start_delay_scans, 10);
 
         //--------------------------------------
         // 3. Initialize fixed structures
@@ -1222,10 +1265,41 @@ private:
         kf.update_iterated_dyn_share_modified(LASER_POINT_COV, solve_H_time);
         state_point = kf.get_x();
         pos_lid = state_point.pos + state_point.rot * state_point.offset_T_L_I;
-        geoQuat.x = state_point.rot.coeffs()[0];
-        geoQuat.y = state_point.rot.coeffs()[1];
-        geoQuat.z = state_point.rot.coeffs()[2];
-        geoQuat.w = state_point.rot.coeffs()[3];
+        // geoQuat.x = state_point.rot.coeffs()[0];
+        // geoQuat.y = state_point.rot.coeffs()[1];
+        // geoQuat.z = state_point.rot.coeffs()[2];
+        // geoQuat.w = state_point.rot.coeffs()[3];
+
+        // --- New: build world->body transform from state_point ---
+        Eigen::Matrix4d T_WB = Eigen::Matrix4d::Identity();
+        T_WB.block<3, 3>(0, 0) = state_point.rot.toRotationMatrix();
+        T_WB.block<3, 1>(0, 3) = state_point.pos;
+
+        // --- Zero-start logic ---
+        processed_scans_for_zero++;
+
+        if (zero_start_pose &&
+            !zero_pose_initialized &&
+            processed_scans_for_zero >= zero_start_delay_scans)
+        {
+            // At this moment, define Z so that T_ZB(t0) = Identity
+            T_world_to_zero = T_WB.inverse(); // T_ZW
+            zero_pose_initialized = true;
+            RCLCPP_INFO(this->get_logger(),
+                        "Zero-start pose initialized at scan %d.",
+                        processed_scans_for_zero);
+        }
+
+        // Pose to publish (either original or zeroed)
+        Eigen::Matrix4d T_ZB = T_WB;
+        if (zero_start_pose && zero_pose_initialized)
+        {
+            T_ZB = T_world_to_zero * T_WB; // T_ZB = T_ZW * T_WB
+        }
+
+        pub_pos = T_ZB.block<3, 1>(0, 3);
+        pub_quat = Eigen::Quaterniond(T_ZB.block<3, 3>(0, 0));
+        pub_quat.normalize(); // for safety
 
         /******* Publish odometry *******/
         if (publish_tf_results)

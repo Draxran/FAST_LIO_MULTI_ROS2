@@ -1,7 +1,7 @@
 /**:
   ros__parameters:
     common:
-        async_debug: true               # debugging cout only for asynchrnous update
+        async_debug: false               # debugging cout only for asynchrnous update
         multi_lidar: true               # if false, single-LiDAR with the first LiDAR topic, extrinsic
         publish_tf_results: false       # publish the transformed LIO and PCD results with extrinsic_T_L1_wrt_drone and extrinsic_R_L1_wrt_drone
         max_iteration: 3                # max iter of IEKF
@@ -9,8 +9,6 @@
         lid_topic:  "/livox/lidar_192_168_1_11"
         lid_topic2:  "/livox/lidar_192_168_1_10"
         imu_topic:  "/livox/imu_192_168_1_11"
-        # imu_topic:  "/mavros/imu/data"
-        # imu_topic:  "/mavros/imu/data_raw"
 
     method:                             # Only used for adaptive mode, thresholds to change mode between bundle and async
         voxelized_pt_num_thres: 1000
@@ -33,15 +31,19 @@
         blind2: 1.0
 
     mapping:
+
+        zero_start_pose: true
+        zero_start_delay_scans: 40
+
         cube_side_length: 1000.0
-        # acc_cov: 0.15
-        # gyr_cov: 0.15
-        # b_acc_cov: 0.0002
-        # b_gyr_cov: 0.0002
-        acc_cov: 0.03
-        gyr_cov: 0.03
-        b_acc_cov: 0.00005
-        b_gyr_cov: 0.00005
+        acc_cov: 0.15
+        gyr_cov: 0.15
+        b_acc_cov: 0.0002
+        b_gyr_cov: 0.0002
+        # acc_cov: 0.03
+        # gyr_cov: 0.03
+        # b_acc_cov: 0.00005
+        # b_gyr_cov: 0.00005
         det_range:     100.0
         extrinsic_est_en:  false       # not supported yet for multi # true: enable the online estimation of IMU-LiDAR extrinsic only for the first LiDAR
         
@@ -73,8 +75,8 @@
 
     publish:
         path_en:  true
-        scan_publish_en:  true       # false: close all the point cloud output
-        dense_publish_en: true      # false: low down the points number in a global-frame point clouds scan.
+        scan_publish_en:  false       # false: close all the point cloud output
+        dense_publish_en: false      # false: low down the points number in a global-frame point clouds scan.
         scan_bodyframe_pub_en: false # true: output the point cloud scans in IMU-body-frame
 
     pcd_save:
